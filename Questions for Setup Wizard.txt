@@ -1,0 +1,645 @@
+# wizard_questions.md
+# Onboarding Wizard — Exact Questions (Tool-agnostic, Evidence-based)
+Version: 0.1 (MVP + strong foundations)
+
+## Guiding rules (app behavior)
+- The wizard is **resume-friendly** (autosave per step).
+- Each step can be **skipped**, but skipped items surface later in “Setup Incomplete”.
+- Autosave writes to `wizard_progress` (`step_id`, `payload`, `completed`, `completed_at`) so jumps between devices never lose context.
+- Enforce “anti-overwhelm” caps:
+  - Max **5 active annual goals**
+  - Max **3 lead indicators** per goal (weekly)
+  - Each active project must have **exactly one Next Action** flagged
+- Use plain language and short prompts.
+- Always include a “Why this matters” helper line.
+
+## Question format
+For each question:
+- **ID**: stable string key
+- **Type**: text | textarea | number | date | time | select | multiselect | scale | upload | tags
+- **Validation**: rules to enforce in UI
+- **Saves to**: suggested DB field(s) / object key(s)
+
+---
+
+## STEP 0 — Welcome & Baseline (2–4 min)
+
+### Q0.1
+- **ID**: `welcome.intention`
+- **Prompt**: "What do you want this app to help you feel more of in 2026?"
+- **Type**: textarea
+- **Helper**: "Example: calm, focused, confident, consistent."
+- **Validation**: 0–500 chars
+- **Saves to**: `settings.intention`
+
+### Q0.2
+- **ID**: `welcome.overwhelm_level`
+- **Prompt**: "Right now, how overwhelmed do you feel?"
+- **Type**: scale (0–10)
+- **Labels**: 0 = "Clear" / 10 = "Overwhelmed"
+- **Validation**: required
+- **Saves to**: `user_baseline.overwhelm_level`
+
+### Q0.3
+- **ID**: `welcome.motivation_level`
+- **Prompt**: "Right now, how motivated do you feel?"
+- **Type**: scale (0–10)
+- **Labels**: 0 = "None" / 10 = "High"
+- **Validation**: required
+- **Saves to**: `user_baseline.motivation_level`
+
+### Q0.4
+- **ID**: `welcome.time_budget_weekly`
+- **Prompt**: "Realistically, how many hours per week can you invest in your goals/projects?"
+- **Type**: number
+- **Validation**: min 0, max 80
+- **Saves to**: `settings.time_budget_weekly_hours`
+
+---
+
+## STEP 1 — Brain Dump / Cognitive Offload (5–15 min)
+
+### Q1.1
+- **ID**: `inbox.brain_dump`
+- **Prompt**: "Brain dump everything on your mind (tasks, worries, ideas, projects, goals)."
+- **Type**: textarea
+- **Helper**: "Don't organize. Just unload."
+- **Validation**: 0–10000 chars
+- **Saves to**: creates multiple `inbox_items` by splitting lines OR saves as `inbox_raw` then parse
+
+### Q1.2
+- **ID**: `inbox.capture_style`
+- **Prompt**: "How do you prefer to capture thoughts?"
+- **Type**: select
+- **Options**:
+  - "One big brain dump" (`brain_dump`)
+  - "Quick single-line capture" (`single_line`)
+  - "Voice-to-text later (manual)" (`voice_to_text`)
+- **Validation**: required
+- **Saves to**: `settings.capture_style`
+
+---
+
+## STEP 2 — Values (10–20 min)
+
+### Q2.1
+- **ID**: `values.select_top_values`
+- **Prompt**: "Select your core values for 2026 (choose 3–7)."
+- **Type**: multiselect + custom add
+- **Default options** (editable):
+  - Health, Growth, Freedom, Mastery, Creativity, Love, Family, Friendship, Integrity, Courage,
+    Service, Spirituality, Adventure, Excellence, Stability, Wealth, Contribution, Learning,
+    Discipline, Joy, Simplicity, Leadership, Curiosity, Community
+- **Validation**: min 3, max 7
+- **Saves to**: `user_values[]`
+
+### Q2.2 (repeats per selected value)
+- **ID pattern**: `values.definition.{value_key}`
+- **Prompt**: "In *your* words, what does **{Value}** mean in daily behavior?"
+- **Type**: textarea
+- **Helper**: "Make it observable. Example: 'Integrity = I do what I said I would do.'"
+- **Validation**: 0–400 chars
+- **Saves to**: `user_values.definition`
+
+### Q2.3
+- **ID**: `values.rank_top5`
+- **Prompt**: "Rank your values (top 5)."
+- **Type**: rank/ordered list
+- **Validation**: exactly 5
+- **Saves to**: `user_values.rank_order`
+
+### Q2.4
+- **ID**: `values.anti_values`
+- **Prompt**: "Optional: What do you refuse to sacrifice in 2026?"
+- **Type**: textarea
+- **Helper**: "Examples: sleep, health, family time, honesty, mental peace."
+- **Validation**: 0–500 chars
+- **Saves to**: `settings.anti_values`
+
+---
+
+## STEP 3 — Identity & Standards (5–10 min)
+
+### Q3.1
+- **ID**: `identity.statements`
+- **Prompt**: "Write 3–7 identity statements (who you are becoming)."
+- **Type**: textarea (one per line)
+- **Helper**: "Start with: 'I am the kind of person who…' (e.g., '…keeps promises to myself.')"
+- **Validation**: 0–1000 chars
+- **Saves to**: `identity_statements` table (`content`, `sort_order`)
+
+### Q3.2
+- **ID**: `identity.non_negotiables`
+- **Prompt**: "What are your non-negotiables (minimum standards) for 2026?"
+- **Type**: textarea
+- **Helper**: "Examples: 7h sleep, exercise 3x/week, weekly review, no doomscrolling in bed."
+- **Validation**: 0–800 chars
+- **Saves to**: `settings.non_negotiables`
+
+---
+
+## STEP 4 — Year Compass (Theme + Mission) (5–10 min)
+
+### Q4.1
+- **ID**: `year.theme`
+- **Prompt**: "If 2026 had ONE theme, what would it be?"
+- **Type**: text
+- **Helper**: "Examples: 'Consistency', 'Build', 'Peace + Power', 'Momentum'."
+- **Validation**: 1–80 chars
+- **Saves to**: `year_theme`
+
+### Q4.2
+- **ID**: `year.mission_statement`
+- **Prompt**: "Write your mission for 2026 (1–3 sentences)."
+- **Type**: textarea
+- **Helper**: "Keep it simple and motivating."
+- **Validation**: 0–400 chars
+- **Saves to**: `mission_statement`
+
+### Q4.3
+- **ID**: `year.definition_of_win`
+- **Prompt**: "At the end of 2026, what would make you say: 'This year was a win'?"
+- **Type**: textarea
+- **Validation**: 0–600 chars
+- **Saves to**: `settings.definition_of_win`
+
+---
+
+## STEP 5 — Life Areas / Domains (3–7 min)
+
+### Q5.1
+- **ID**: `domains.choose`
+- **Prompt**: "Choose the life areas you want to manage."
+- **Type**: multiselect + custom add
+- **Default options**:
+  - Health, Mind, Relationships, Career/Work, Money, Learning, Creativity, Home, Fun/Adventure, Spirituality
+- **Validation**: min 3, max 10
+- **Saves to**: `life_domains[]`
+
+### Q5.2 (repeat per domain)
+- **ID pattern**: `domains.score.{domain_key}`
+- **Prompt**: "Rate your current satisfaction in **{Domain}**."
+- **Type**: scale (0–10)
+- **Validation**: required
+- **Saves to**: `life_domains.satisfaction_score`
+
+### Q5.3 (repeat per domain)
+- **ID pattern**: `domains.note.{domain_key}`
+- **Prompt**: "What would a +2 improvement in **{Domain}** look like?"
+- **Type**: textarea
+- **Validation**: 0–400 chars
+- **Saves to**: `life_domains.plus_two_definition`
+
+---
+
+## STEP 6 — Visualization & Manifestation (10–25 min)
+
+### Q6.1
+- **ID**: `vision.future_self_letter`
+- **Prompt**: "Write a letter from Dec 31, 2026 — as if you achieved your goals."
+- **Type**: textarea
+- **Helper**: "Describe outcomes, habits, and how you feel."
+- **Validation**: 0–2000 chars
+- **Saves to**: `future_self_letter`
+
+### Q6.2
+- **ID**: `vision.feelings`
+- **Prompt**: "Choose 3–7 feelings you want to experience regularly in 2026."
+- **Type**: tags (suggestions + custom)
+- **Suggestions**: Calm, Focused, Confident, Energized, Free, Proud, Grateful, Powerful, Peaceful, Present, Disciplined, Joyful
+- **Validation**: min 3, max 7
+- **Saves to**: `feeling_goals[]`
+
+### Q6.3
+- **ID**: `vision.scenes`
+- **Prompt**: "Describe 3 vivid scenes of your ideal 2026 (1–4 sentences each)."
+- **Type**: textarea
+- **Helper**: "Example: 'Morning routine in my apartment, coffee, writing for 45 minutes…'"
+- **Validation**: 0–1200 chars
+- **Saves to**: `vision_scenes[]`
+
+### Q6.4
+- **ID**: `vision.tiles_upload`
+- **Prompt**: "Add vision tiles (images and/or text). Aim for 5–20."
+- **Type**: upload (images) + text tiles
+- **Validation**: optional; cap 30
+- **Helper**: Images upload through signed URLs and store at `vision-tiles/{user_id}/{uuid}`.
+- **Saves to**: `vision_tiles[]` (each tile: `tile_type`, `text_content`, `image_path`, `tags`, `pinned`)
+
+### Q6.5
+- **ID**: `vision.mantra`
+- **Prompt**: "Write a short mantra for 2026 (one line)."
+- **Type**: text
+- **Validation**: 0–120 chars
+- **Saves to**: `settings.mantra`
+
+### Q6.6
+- **ID**: `vision.visualization_script`
+- **Prompt**: "Optional: Write a 60–120 second visualization script you can read daily."
+- **Type**: textarea
+- **Validation**: 0–1500 chars
+- **Saves to**: `settings.visualization_script`
+
+---
+
+## STEP 7 — Annual Goals (Outcome-focused) (15–30 min)
+
+### Q7.1
+- **ID**: `goals.count`
+- **Prompt**: "How many annual goals do you want (max 5)?"
+- **Type**: number
+- **Validation**: min 1, max 5
+- **Saves to**: wizard runtime
+
+### Q7.2 (repeat per goal)
+- **ID pattern**: `goals.{n}.title`
+- **Prompt**: "Goal #{n} — Name it in 2–6 words."
+- **Type**: text
+- **Validation**: 2–60 chars
+- **Saves to**: `goals.title`
+
+### Q7.3
+- **ID pattern**: `goals.{n}.why`
+- **Prompt**: "Why does this goal matter to you?"
+- **Type**: textarea
+- **Validation**: 0–400 chars
+- **Saves to**: `goals.why`
+
+### Q7.4
+- **ID pattern**: `goals.{n}.aligned_values`
+- **Prompt**: "Which values does this goal serve?"
+- **Type**: multiselect (from Step 2)
+- **Validation**: min 1
+- **Saves to**: `goal_value_links` (goal_id + value_id rows)
+
+### Q7.5
+- **ID pattern**: `goals.{n}.success_definition`
+- **Prompt**: "Define success clearly. What proves this goal happened?"
+- **Type**: textarea
+- **Validation**: 0–400 chars
+- **Saves to**: `goals.success_definition`
+
+### Q7.6
+- **ID pattern**: `goals.{n}.metric_name`
+- **Prompt**: "What metric will you track for this goal?"
+- **Type**: text
+- **Helper**: "Examples: bodyweight, revenue, hours practiced, projects shipped."
+- **Validation**: 0–80 chars
+- **Saves to**: `goals.metric_name`
+
+### Q7.7
+- **ID pattern**: `goals.{n}.baseline`
+- **Prompt**: "Current baseline (number)."
+- **Type**: number
+- **Validation**: optional
+- **Saves to**: `goals.metric_baseline`
+
+### Q7.8
+- **ID pattern**: `goals.{n}.target`
+- **Prompt**: "Target by Dec 31, 2026 (number)."
+- **Type**: number
+- **Validation**: optional
+- **Saves to**: `goals.metric_target`
+
+### Q7.9
+- **ID pattern**: `goals.{n}.confidence`
+- **Prompt**: "How confident are you (0–10) that you can achieve this?"
+- **Type**: scale (0–10)
+- **Validation**: required
+- **Saves to**: `goals.confidence_score`
+
+### Q7.10
+- **ID pattern**: `goals.{n}.motivation`
+- **Prompt**: "How excited are you about this (0–10)?"
+- **Type**: scale (0–10)
+- **Validation**: required
+- **Saves to**: `goals.motivation_score`
+
+### Q7.11
+- **ID pattern**: `goals.{n}.avoidance_reframe`
+- **Prompt**: "If this goal is phrased as 'stop/avoid', rephrase it into a positive 'build/achieve'."
+- **Type**: text
+- **Validation**: optional
+- **Saves to**: `goals.approach_phrase`
+
+---
+
+## STEP 8 — Lead Indicators (Weekly actions you control) (10–20 min)
+
+### Q8.1 (repeat per goal)
+- **ID pattern**: `goals.{n}.lead_indicators`
+- **Prompt**: "Choose 1–3 weekly lead indicators for **{Goal Title}**."
+- **Type**: repeatable group (up to 3)
+- **Validation**: min 1, max 3
+- **Saves to**: `lead_indicators[]`
+
+For each lead indicator (LI):
+
+#### Q8.1a
+- **ID pattern**: `goals.{n}.li.{k}.name`
+- **Prompt**: "Lead indicator #{k} — What will you do weekly?"
+- **Type**: text
+- **Example**: "Lift weights", "Publish 1 post", "Code 6 hours"
+- **Validation**: 2–80 chars
+- **Saves to**: `lead_indicators.name`
+
+#### Q8.1b
+- **ID pattern**: `goals.{n}.li.{k}.type`
+- **Prompt**: "How is it measured?"
+- **Type**: select
+- **Options**: "Binary (did/didn't)", "Count", "Time (minutes/hours)"
+- **Validation**: required
+- **Saves to**: `lead_indicators.type`
+
+#### Q8.1c
+- **ID pattern**: `goals.{n}.li.{k}.weekly_target`
+- **Prompt**: "Weekly target (number)."
+- **Type**: number
+- **Validation**: min 0, max 100
+- **Saves to**: `lead_indicators.weekly_target`
+
+#### Q8.1d
+- **ID pattern**: `goals.{n}.li.{k}.minimum_version`
+- **Prompt**: "Minimum version (for low-energy days)."
+- **Type**: text
+- **Example**: "Do 1 set" / "Write 50 words" / "5 minutes"
+- **Validation**: 0–120 chars
+- **Saves to**: `lead_indicators.minimum_version`
+
+#### Q8.1e
+- **ID pattern**: `goals.{n}.li.{k}.schedule_anchor`
+- **Prompt**: "When will this usually happen?"
+- **Type**: select + optional time
+- **Options**:
+  - "Morning"
+  - "Midday"
+  - "Evening"
+  - "Specific time"
+  - "Flexible"
+- **Saves to**: `lead_indicators.anchor`
+
+---
+
+## STEP 9 — Projects (finite outcomes) + Next Actions (15–30 min)
+
+### Q9.1 (repeat per goal)
+- **ID pattern**: `goals.{n}.projects`
+- **Prompt**: "Create projects for **{Goal Title}** (1–10)."
+- **Type**: repeatable group
+- **Validation**: min 1, max 10
+- **Saves to**: `projects[]`
+
+For each project:
+
+#### Q9.1a
+- **ID pattern**: `goals.{n}.project.{p}.title`
+- **Prompt**: "Project #{p} — Name it."
+- **Type**: text
+- **Validation**: 2–120 chars
+- **Saves to**: `projects.title`
+
+#### Q9.1b
+- **ID pattern**: `goals.{n}.project.{p}.definition_of_done`
+- **Prompt**: "Definition of done (deliverable)."
+- **Type**: textarea
+- **Validation**: 0–300 chars
+- **Saves to**: `projects.definition_of_done`
+
+#### Q9.1c
+- **ID pattern**: `goals.{n}.project.{p}.due_date`
+- **Prompt**: "Optional due date."
+- **Type**: date
+- **Validation**: optional
+- **Saves to**: `projects.due_date`
+
+#### Q9.1d
+- **ID pattern**: `goals.{n}.project.{p}.next_action`
+- **Prompt**: "Next action (the smallest visible step)."
+- **Type**: text
+- **Helper**: "Must be doable in one sitting."
+- **Validation**: 2–200 chars (required)
+- **Saves to**: create `tasks` row with `is_next_action = true`
+
+---
+
+## STEP 10 — WOOP + If–Then Plans (10–25 min)
+
+### Q10.1
+- **ID**: `obstacles.common_derailers`
+- **Prompt**: "What usually derails you? (choose up to 7)"
+- **Type**: multiselect + custom add
+- **Options**:
+  - Low energy, Anxiety/overthinking, Phone/social media, Unclear next step, Perfectionism,
+    Procrastination, Poor sleep, Overcommitting, Distractions, Fear of failure, Stress,
+    Lack of time, Lack of structure
+- **Validation**: max 7
+- **Saves to**: `settings.common_derailers[]`
+
+### Q10.2 (repeat per goal)
+- **ID pattern**: `goals.{n}.woop.wish`
+- **Prompt**: "WOOP — Wish (state the goal in one line)."
+- **Type**: text
+- **Validation**: 0–120 chars
+- **Saves to**: `woops.wish`
+
+### Q10.3
+- **ID pattern**: `goals.{n}.woop.outcome`
+- **Prompt**: "WOOP — Outcome (best result + how it feels)."
+- **Type**: textarea
+- **Validation**: 0–400 chars
+- **Saves to**: `woops.outcome`
+
+### Q10.4
+- **ID pattern**: `goals.{n}.woop.obstacle`
+- **Prompt**: "WOOP — Main obstacle inside you (not external)."
+- **Type**: textarea
+- **Helper**: "Example: 'I avoid discomfort and start scrolling.'"
+- **Validation**: 0–300 chars
+- **Saves to**: `woops.obstacle`
+
+### Q10.5
+- **ID pattern**: `goals.{n}.woop.plan`
+- **Prompt**: "WOOP — Plan (If–Then). When the obstacle shows up, what will you do?"
+- **Type**: textarea
+- **Helper**: "Format: If [trigger], then I will [response]."
+- **Validation**: 0–400 chars
+- **Saves to**: `woops.plan` and create `if_then_plans`
+
+### Q10.6 (repeat per goal; up to 3)
+- **ID pattern**: `goals.{n}.if_then.{k}`
+- **Prompt**: "Add another If–Then plan for this goal (optional, up to 3)."
+- **Type**: repeatable group
+- **Validation**: max 3
+- **Saves to**: `if_then_plans[]`
+
+For each If–Then:
+
+- **Trigger** (text): "If…"
+- **Response** (text): "Then I will…"
+- **Category** (select): "Focus", "Energy", "Anxiety", "Distraction", "Planning", "Recovery"
+- **Default active** (boolean): true
+
+---
+
+## STEP 11 — Habit Setup (5–20 min)
+
+### Q11.1
+- **ID**: `habits.from_lead_indicators`
+- **Prompt**: "Turn lead indicators into habits?"
+- **Type**: select
+- **Options**:
+  - "Yes, auto-create habits from lead indicators"
+  - "No, I’ll create habits manually"
+- **Validation**: required
+- **Saves to**: wizard runtime decision
+
+### Q11.2 (manual habits)
+- **ID**: `habits.manual_list`
+- **Prompt**: "Add habits you want to track (0–12)."
+- **Type**: repeatable group
+- **Validation**: max 12
+- **Saves to**: `habits[]`
+
+For each habit:
+
+- **ID pattern**: `habits.{h}.name`
+- **Prompt**: "Habit name"
+- **Type**: text
+- **Validation**: 2–80 chars
+
+- **ID pattern**: `habits.{h}.linked_goal`
+- **Prompt**: "Optional: link this habit to a goal"
+- **Type**: select (goals + “none”)
+
+- **ID pattern**: `habits.{h}.cue`
+- **Prompt**: "Cue / trigger (when does it happen?)"
+- **Type**: text
+- **Example**: "After coffee" / "At 7:30am" / "After work"
+
+- **ID pattern**: `habits.{h}.where`
+- **Prompt**: "Where does it happen?"
+- **Type**: text (optional)
+
+- **ID pattern**: `habits.{h}.tracking_type`
+- **Prompt**: "How do you track it?"
+- **Type**: select
+- **Options**: "Binary", "Count", "Time"
+
+- **ID pattern**: `habits.{h}.weekly_target`
+- **Prompt**: "Weekly target (number)"
+- **Type**: number
+- **Validation**: 0–100
+
+- **ID pattern**: `habits.{h}.minimum_version`
+- **Prompt**: "Minimum version"
+- **Type**: text
+- **Validation**: 0–120 chars
+
+---
+
+## STEP 12 — Cadence & Notifications (3–8 min)
+
+### Q12.0
+- **ID**: `cadence.timezone`
+- **Prompt**: "What timezone should we use for “today” and reviews?"
+- **Type**: select (pre-populate common TZs + search) or auto-detect with confirm
+- **Validation**: required
+- **Saves to**: `settings.timezone`
+
+### Q12.1
+- **ID**: `cadence.daily_checkin_time`
+- **Prompt**: "Daily check-in time"
+- **Type**: time
+- **Validation**: optional
+- **Saves to**: `settings.daily_checkin_time`
+
+### Q12.2
+- **ID**: `cadence.weekly_review_day`
+- **Prompt**: "Weekly review day"
+- **Type**: select
+- **Options**: Monday…Sunday
+- **Validation**: required
+- **Saves to**: `settings.weekly_review_day`
+
+### Q12.3
+- **ID**: `cadence.weekly_review_time`
+- **Prompt**: "Weekly review time"
+- **Type**: time
+- **Validation**: required
+- **Saves to**: `settings.weekly_review_time`
+
+### Q12.4
+- **ID**: `cadence.monthly_reset_day`
+- **Prompt**: "Monthly reset day (1–28)"
+- **Type**: number
+- **Validation**: min 1, max 28
+- **Saves to**: `settings.monthly_reset_day`
+
+### Q12.5
+- **ID**: `cadence.notifications`
+- **Prompt**: "Enable reminders?"
+- **Type**: multiselect
+- **Options**:
+  - "Daily check-in"
+  - "Weekly review"
+  - "Monthly reset"
+- **Validation**: optional
+- **Saves to**: `settings.notifications[]`
+
+---
+
+## STEP 13 — Dashboard Preferences (2–5 min)
+
+### Q13.1
+- **ID**: `dashboard.max_daily_outcomes`
+- **Prompt**: "Max focus outcomes per day"
+- **Type**: number
+- **Validation**: min 1, max 5
+- **Default**: 3
+- **Saves to**: `settings.max_daily_outcomes`
+
+### Q13.2
+- **ID**: `dashboard.max_daily_tasks`
+- **Prompt**: "Max tasks shown on Today"
+- **Type**: number
+- **Validation**: min 3, max 20
+- **Default**: 10
+- **Saves to**: `settings.max_daily_tasks`
+
+### Q13.3
+- **ID**: `dashboard.vision_rotation_mode`
+- **Prompt**: "Vision rotation"
+- **Type**: select
+- **Options**:
+  - "Random"
+  - "By active goal"
+  - "Pinned only"
+- **Validation**: required
+- **Saves to**: `settings.vision_rotation_mode`
+
+### Q13.4
+- **ID**: `dashboard.default_mode`
+- **Prompt**: "Default landing page"
+- **Type**: select
+- **Options**:
+  - "Today Dashboard"
+  - "Vision Mode"
+  - "Inbox"
+- **Validation**: required
+- **Saves to**: `settings.default_landing`
+
+---
+
+## STEP 14 — Finish (auto-generated summary)
+
+### Q14.1 (no input)
+- **ID**: `finish.summary`
+- **Output**: Show:
+  - Theme + Mission
+  - Values
+  - Goals + lead indicators
+  - Active projects + next actions
+  - Habits
+  - Top If–Then plans
+- **Setup Incomplete callout**: list any steps with `wizard_progress.completed = false` and offer “Resume” links.
+- **CTA**: "Go to Today Dashboard" / "Start Vision Mode"

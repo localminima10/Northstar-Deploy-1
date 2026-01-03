@@ -1,0 +1,84 @@
+# ai_ide_bootstrap_prompt.md
+# Prompt to feed an AI IDE (Cursor/Claude/Codex) to generate a development plan + scaffolding
+
+You are building a personal webapp called "Northstar" to manage yearly goals, projects, habits, and visualization/manifestation.
+
+## Tech decisions (fixed)
+- Next.js (App Router) + React + TypeScript
+- Supabase for:
+  - Auth (email/password)
+  - Postgres database (see `SQL Schema.txt`)
+  - Storage (vision tile images in private bucket `vision-tiles`)
+- Mutations flow through Next.js Server Actions; the only route handler is for generating Supabase Storage signed URLs.
+- Styling: TailwindCSS preferred (or minimal CSS modules if faster).
+
+## Core product requirements (MVP)
+1) Auth: login/signup/reset.
+2) Onboarding wizard (see `wizard_questions.md`):
+   - Step-based, autosave, resume
+   - Writes per-step payloads to `wizard_progress` so skips/incomplete sections surface later
+   - At the end, create initial rows for goals/projects/tasks/habits/vision tiles + WOOP/If–Then + baselines/domains/identity and mark onboarding complete
+3) Today Dashboard:
+   - Shows year theme/mission and rotating vision tile(s)
+   - Pick daily focus outcomes (max 3)
+   - Shows next actions (tasks with is_next_action=true) from active projects
+   - Habit checklist + logging
+   - “Defend the day”: choose derailer -> show if-then plans
+   - Quick capture inbox item
+   - Night close-out (win/lesson/next action)
+   - Enforces timezone-aware single daily check-in per user
+4) Vision Mode:
+   - Full screen vision tiles + future self letter + visualization script
+   - Pin tiles, rotation based on settings
+   - Tiles load via signed URLs from `vision-tiles/${user_id}/...`
+5) Inbox:
+   - Add items fast
+   - Process items into tasks/projects, archive
+6) Weekly Review:
+   - Checklist + notes
+   - Ensure each active project has a next action (surface warnings)
+   - Capture timezone + submitted_at timestamps
+7) Baseline / Life Domains / Identity:
+   - Display baseline overwhelm/motivation
+   - CRUD life domains (satisfaction + +2 note)
+   - Manage identity statements and core values (3–7) incl. rank order + goal links
+8) Setup Incomplete + Resume:
+   - Show outstanding wizard steps on dashboard
+   - Deep-link users back into exact step to finish
+
+## Data layer
+- Use the provided `SQL Schema.txt` (includes `user_baseline`, `life_domains`, `identity_statements`, `wizard_progress`, `goal_value_links`, timezone-aware `daily_checkins`, etc.).
+- Enforce Row Level Security (RLS) for every table plus the join table; helper policies already drafted.
+- All user-owned tables filter by `user_id = auth.uid()`. `wizard_progress` uses the same rule; `goal_value_links` checks both goal + value ownership.
+- Supabase Storage bucket `vision-tiles` is private; store files under `${user_id}/` and only expose signed URLs generated server-side.
+
+## Deliverables you must generate
+1) A detailed development plan (milestones + tasks).
+2) Suggested folder structure for Next.js App Router (route groups `(auth)`, `(onboarding)`, `(app)`).
+3) DB migration plan (Supabase migrations) + storage bucket policy + RLS checklist.
+4) Initial code scaffolding:
+   - auth pages
+   - protected layouts + navigation
+   - Supabase server/client helpers
+   - server action utilities (validation + revalidation)
+5) Onboarding wizard screens with autosave/resume + file upload handling + “Setup incomplete” banner.
+6) Today Dashboard with timezone-aware daily check-in, derailer picker, habit logging, and quick capture.
+7) Vision Mode wired to Supabase Storage signed URLs and rotation settings.
+8) Inbox + Weekly Review flows, including baseline/life domain/identity editors and “missing next action” warnings.
+
+## Constraints / quality bars
+- Keep UI simple and fast; avoid overengineering.
+- Use stable IDs for wizard questions so saved answers map consistently.
+- Implement "one next action per project" rule (DB index + UI logic).
+- Cap active goals to 5 (enforce in UI and warn if exceeded).
+- Provide clear error handling and loading states.
+- Wizard autosave/resume must never lose step data (use `wizard_progress`).
+- Only one daily check-in per user per local day (respect `user_settings.timezone`).
+- Vision assets must stay private; uploads/downloads go through signed URLs scoped to the user.
+
+## Output format requested
+- First: architecture overview
+- Then: step-by-step dev plan
+- Then: file/folder structure
+- Then: key implementation details (auth, RLS, wizard persistence, dashboard queries)
+- Then: TODO list for follow-ups

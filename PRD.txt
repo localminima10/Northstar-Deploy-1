@@ -1,0 +1,283 @@
+# PRD.md
+# PRD — Personal Goal/Projects OS Webapp (Next.js + Supabase)
+Product Name: (working) "Northstar"
+Owner: Johnny
+Version: 0.2 (schema-aligned MVP)
+Date: 2026-01-02 (context)
+
+---
+
+## 1) Problem Statement
+I have many goals/projects and feel anxious/overwhelmed. I need a structured way to:
+- Offload thoughts (reduce mental clutter)
+- Clarify values and yearly direction
+- Convert goals into executable projects and next actions
+- Maintain habits and motivation
+- Use visualization/manifestation daily to stay focused
+
+---
+
+## 2) Target User
+- Single user (Johnny). Future-proofed for multi-user via `user_id` scoping.
+
+---
+
+## 3) Goals & Non-Goals
+
+### Product Goals (what success looks like)
+- I can complete onboarding and end with:
+  - A clear Year Theme + Mission
+  - 3–5 goals with measurable outcomes + weekly lead indicators
+  - Projects with next actions
+  - Habits tied to goals
+  - If–Then plans for derailers
+  - A daily dashboard that is actionable and motivating
+- Daily use takes **< 5 minutes** to plan + visualize.
+- Weekly review takes **20–45 minutes** and keeps the system clean.
+
+### Non-Goals (MVP)
+- Team collaboration
+- Complex calendar integrations
+- AI auto-coaching (can be added later)
+- Mobile native apps (PWA later)
+
+---
+
+## 4) Key Principles (Product Constraints)
+- Reduce overwhelm:
+  - cap active goals (max 5)
+  - cap daily outcomes (default 3)
+  - cap daily tasks displayed
+- “Next Action required” for active projects
+- Visualization is a first-class mode, not a feature buried in settings
+- Onboarding wizard is resume-friendly (autosave per step, track skipped items) and never loses data.
+- Daily/weekly logs are timezone-aware and tied to the user's declared timezone.
+
+---
+
+## 5) Primary User Flows
+
+### 5.1 Auth
+- Email + password sign up / sign in via Supabase Auth
+- Password reset via Supabase
+- After auth:
+  - If onboarding not complete → `/onboarding`
+  - Else → default landing (Today or Vision)
+
+### 5.2 Onboarding Wizard
+- Step-based wizard (see `wizard_questions.md`)
+- Autosave after each step via `wizard_progress` (step_id + payload jsonb). Users can leave anytime without losing context.
+- Skipped questions are flagged and surface later inside a “Setup Incomplete” tray on the dashboard until filled.
+- Finish generates initial:
+  - Goals, projects, next actions, habits, WOOP entries, if-then plans, vision tiles
+  - Baseline metrics (overwhelm/motivation), life domains, identity statements, capture style, derailer list, notification preferences
+- Image uploads go through a server action that issues Supabase Storage signed URLs (bucket `vision-tiles/${user_id}/...`).
+- Marks `settings.onboarding_completed = true`
+
+### 5.3 Daily Flow (Today Dashboard)
+- 1–2 minute Manifestation header (theme, rotating/pinned vision tiles, feelings, script)
+- Pick top outcomes (max 3) and store them in `daily_checkins` (unique per user per date, based on the user’s timezone)
+- Suggested next actions (from active projects) + habit checklist
+- “Defend the day” prompt:
+  - choose likely derailer → show If–Then plan(s)
+- Night close-out:
+  - 1 win, 1 lesson, 1 next action locked-in
+
+### 5.4 Weekly Review
+- Checklist UI:
+  - Process inbox
+  - Review lead indicators score
+  - Ensure each active project has a next action
+  - Archive/paused stale projects
+  - Refresh vision mode
+- Weekly review is logged in `weekly_reviews` with timezone capture and powers streaks/insights.
+
+### 5.5 Vision / Setup bridge
+- Vision Mode is a peer to Today dashboard (full-screen tiles, future-self letter, script).
+- Dashboard shows “Setup Incomplete” card that links back into unfinished wizard steps (using `wizard_progress.completed` flags).
+
+---
+
+## 6) Feature Requirements
+
+### 6.1 Today Dashboard (MVP)
+**Must**
+- Show Year Theme + Mission (short)
+- Show rotating Vision Tile(s) (image/text)
+- Show Top Outcomes (editable daily)
+- Show Tasks:
+  - auto-suggest from active projects (prioritize next actions)
+- Habit tracker:
+  - quick log for today
+- If–Then quick activation for today
+- Quick Capture input (creates inbox item)
+- Respect per-user timezone so only one daily check-in exists per local day.
+- Obstacle picker is pre-filled from the user’s derailers list.
+
+**Should**
+- “Focus Mode” view: hides everything except next action + timer
+- “Minimum version” button for habits/lead indicators
+- Link focus outcomes to a pinned vision tile or feeling for extra motivation.
+
+### 6.2 Inbox (Capture + Processing)
+**Must**
+- Add inbox item quickly (text + optional domain/tag)
+- Inbox processing actions:
+  - convert to Task (and optionally Project)
+  - convert to Project
+  - link to existing Goal/Project
+  - archive/delete
+
+### 6.3 Goals
+**Must**
+- CRUD goals (title, why, metric baseline/target)
+- Each goal shows:
+  - progress vs metric target
+  - linked projects and habits
+
+### 6.4 Projects & Tasks
+**Must**
+- CRUD projects (linked to goal)
+- CRUD tasks (linked to project)
+- Enforce “one next action per active project”
+  - UI provides “Set as Next Action”
+  - When set, unset prior next action
+
+### 6.5 Habits
+**Must**
+- CRUD habits (cue, tracking type, weekly target, minimum version)
+- Log habit completion daily (binary/count/time)
+- Show weekly summary
+
+### 6.6 Vision & Manifestation Mode
+**Must**
+- Full-screen vision board (tiles)
+- “Future self letter” view
+- Optional visualization script (editable)
+- Pin tiles
+- Rotation logic based on settings
+- Tiles are stored per user in a private Supabase Storage bucket (`vision-tiles/${user_id}/...`) and accessed via signed URLs issued by server actions.
+
+### 6.7 WOOP / If–Then Plans
+**Must**
+- Store WOOP entries for goals/projects/habits
+- Store If–Then plans with:
+  - trigger, response, category, active flag
+- Surface If–Then plans in Today dashboard when user selects derailer
+
+### 6.8 Reviews
+**Must**
+- Daily check-in log (outcomes, obstacle, win, lesson)
+- Weekly review session record (notes + checklist completion)
+
+### 6.9 Settings
+**Must**
+- cadence (daily check-in time, weekly review schedule)
+- dashboard caps
+- default landing
+- vision rotation mode
+- capture style, notification preferences, timezone, derailers list
+
+### 6.10 Baseline & Life Domains
+**Must**
+- Record baseline overwhelm/motivation (single row per user) and allow refreshing annually.
+- CRUD life domains (3–10) with satisfaction score (0–10) and “+2 improvement” note.
+- Surface domain deltas on weekly review so users know what to nudge.
+
+### 6.11 Identity & Values
+**Must**
+- Manage identity statements (3–7) with ordering.
+- Manage core values (3–7) with definitions, ranking top 5, and link values to goals.
+
+### 6.12 Wizard Resume / Setup Incomplete
+**Must**
+- Show outstanding wizard step groups on dashboard until completed.
+- Allow jumping directly into the exact unanswered question (via `wizard_progress` row).
+- Prevent onboarding completion flag until required artifacts exist (min 1 goal, each project next action, timezone set).
+
+---
+
+## 7) Data & Analytics (Personal)
+- No third-party tracking required.
+- Internal “Insights”:
+  - habit streaks
+  - lead indicator weekly score
+  - completion rate of next actions
+  - most common derailers (from daily check-ins)
+  - changes in overwhelm/motivation baseline over time
+  - life domain satisfaction ladder (+/- vs last review)
+
+---
+
+## 8) Non-Functional Requirements
+- Fast page load (target < 1s on local dev; reasonable on Vercel)
+- Data safety:
+  - Supabase RLS policies enforce row ownership
+- Timezone correctness:
+  - store `timezone` on `user_settings`
+  - compute “today”/“this week” server-side based on that zone
+- Vision assets stay private in Supabase Storage; clients only receive signed URLs scoped to their user folder.
+- Offline not required for MVP (nice-to-have later)
+- Accessible UI basics (keyboard navigation, readable contrast)
+
+---
+
+## 9) Tech Stack
+- Frontend: Next.js (App Router) + React + TypeScript
+- UI: TailwindCSS (or simple CSS modules)
+- Auth/DB/Storage: Supabase
+  - Auth: email/password
+  - DB: Postgres
+  - Storage: private bucket for vision tile images + signed URL helpers
+- Data mutations use Next.js Server Actions (classed helpers) so Supabase keys never leave the server; only file uploads need a route handler for signed URLs.
+- Deployment: Vercel (frontend) + Supabase hosted project
+
+---
+
+## 10) High-Level Architecture
+- Next.js App Router with route groups:
+  - `(auth)` for sign-in/up/reset
+  - `(onboarding)/wizard/[step]` guarded by onboarding flag
+  - `(app)` protected layout for Today/Vision/Inbox/Reviews
+- Server Components fetch data via `createServerClient`; client components only use Supabase for realtime or storage previews via `createClientComponentClient`.
+- Mutations flow through typed Server Actions in `app/actions/*` that perform validation, run Supabase queries, and return revalidated data.
+- `lib/db/*` hosts query helpers (e.g., `getTodayDashboardData`, `getProjectsNeedingNextAction`).
+- Wizard persistence uses `wizard_progress` reads/writes per step plus derived “Setup incomplete” status.
+- File uploads go through `/api/storage/sign` route handler that validates user_id, scopes paths to `${user_id}/...`, and returns signed URLs.
+- Timezone helpers (`getTodayRange(timezone)`) centralize “today” calculations for check-ins and weekly reviews.
+
+---
+
+## 11) MVP Scope Checklist (Definition of Done)
+- Auth working
+- Onboarding wizard saves and produces working dashboard
+- Wizard autosave/resume via `wizard_progress` + “setup incomplete” surfaces
+- CRUD:
+  - goals, projects, tasks, habits, vision tiles
+- Baseline, life domains, identity statements, and derailers editable post-onboarding
+- Today dashboard usable daily
+- Weekly review checklist usable weekly
+- Timezone-aware daily/weekly logs (per-user timezone stored)
+- Vision storage bucket locked down per user (signed URLs only)
+- RLS enabled for all user tables + link tables
+
+---
+
+## 12) Milestones
+1. Project setup + auth + protected layout shell
+2. Supabase migrations: new tables, indexes, storage bucket + RLS policies
+3. Onboarding wizard w/ autosave, skip surfacing, storage upload hook
+4. Core CRUD (goals/projects/tasks/habits) + next-action enforcement helpers
+5. Today dashboard + timezone-aware daily check-ins + If–Then activation
+6. Vision mode + signed URL pipeline + Setup Incomplete banner
+7. Weekly review + inbox processing + baseline/identity editors
+8. QA, accessibility, telemetry, deploy
+
+---
+
+## 13) Out of Scope (Later)
+- Calendar integration
+- AI-generated suggestions
+- Mobile native app
+- Multi-user collaboration
+`
