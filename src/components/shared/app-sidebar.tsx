@@ -21,7 +21,7 @@ interface AppSidebarProps {
   settings: UserSettings | null;
 }
 
-const navItems = [
+export const navItems = [
   { href: '/today', label: 'Today', icon: '◉' },
   { href: '/vision', label: 'Vision', icon: '✦' },
   { href: '/inbox', label: 'Inbox', icon: '↳' },
@@ -40,7 +40,7 @@ export function AppSidebar({ user, settings }: AppSidebarProps) {
     .toUpperCase() || 'NS';
 
   return (
-    <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col">
+    <aside className="hidden md:flex w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <Link href="/today" className="flex items-center gap-3">

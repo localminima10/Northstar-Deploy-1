@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AppSidebar } from '@/components/shared/app-sidebar';
+import { MobileNav } from '@/components/shared/mobile-nav';
 import { SetupIncompleteBanner } from '@/components/shared/setup-incomplete-banner';
 
 export default async function AppLayout({
@@ -34,14 +35,17 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen bg-background">
       <AppSidebar user={user} settings={settings} />
-      <main className="flex-1 overflow-auto">
-        {incompleteSteps.length > 0 && (
-          <SetupIncompleteBanner incompleteSteps={incompleteSteps} />
-        )}
-        <div className="container mx-auto p-6 max-w-6xl">
-          {children}
-        </div>
-      </main>
+      <div className="flex-1 flex flex-col overflow-auto">
+        <MobileNav user={user} settings={settings} />
+        <main className="flex-1 overflow-auto">
+          {incompleteSteps.length > 0 && (
+            <SetupIncompleteBanner incompleteSteps={incompleteSteps} />
+          )}
+          <div className="container mx-auto p-4 md:p-6 max-w-6xl">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
