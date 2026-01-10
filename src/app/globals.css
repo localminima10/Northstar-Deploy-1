@@ -212,3 +212,63 @@
     background: var(--foreground);
   }
 }
+
+/* Print styles for PDF export */
+@media print {
+  /* Reset to light theme for printing */
+  :root {
+    color-scheme: light;
+  }
+  
+  /* Hide navigation and non-printable elements */
+  nav,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 1.5cm;
+  }
+  
+  /* Print container styles */
+  .print-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: black !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+  
+  /* Section page breaks */
+  .print-section {
+    page-break-inside: avoid;
+  }
+  
+  /* Avoid breaking inside these elements */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  
+  /* Card styles for print */
+  .print-container .border {
+    border-color: #ccc !important;
+  }
+  
+  /* Links */
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+  
+  /* Ensure proper borders */
+  .print-container .border-l-4 {
+    border-left-width: 4px !important;
+    border-left-style: solid !important;
+  }
+}

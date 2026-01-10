@@ -20,6 +20,7 @@ import { updateSettings, updateBaseline } from '@/app/actions/settings';
 import { signOut } from '@/app/actions/auth';
 import { TIMEZONE_OPTIONS } from '@/lib/utils/timezone';
 import { toast } from 'sonner';
+import { ExportSection } from '@/components/settings/export-section';
 import type { UserSettings, UserBaseline, LifeDomain, UserValue, IdentityStatement, IfThenPlan } from '@/lib/types/database';
 
 interface SettingsFormProps {
@@ -158,12 +159,13 @@ export function SettingsForm({
 
   return (
     <Tabs defaultValue="general" className="w-full">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-6">
         <TabsTrigger value="general">General</TabsTrigger>
         <TabsTrigger value="vision">Vision</TabsTrigger>
         <TabsTrigger value="cadence">Cadence</TabsTrigger>
         <TabsTrigger value="obstacles">Obstacles</TabsTrigger>
         <TabsTrigger value="account">Account</TabsTrigger>
+        <TabsTrigger value="export">Export</TabsTrigger>
       </TabsList>
       
       {/* General Settings */}
@@ -579,6 +581,11 @@ export function SettingsForm({
             </div>
           </CardContent>
         </Card>
+      </TabsContent>
+      
+      {/* Export Settings */}
+      <TabsContent value="export" className="space-y-6 mt-6">
+        <ExportSection />
       </TabsContent>
     </Tabs>
   );
